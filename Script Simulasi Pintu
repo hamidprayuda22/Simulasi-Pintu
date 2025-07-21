@@ -19,10 +19,10 @@ byte pin_column[COLUMN_NUM] = {25, 33, 32,17};
 
 Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
 
-const String password_1 = "1234"; 
-const String password_2 = "4444";  
-const String password_3 = "ABCD";  
-String input_password;
+const String pin_1 = "1234"; 
+const String pin_2 = "4444";  
+const String pin_3 = "ABCD";  
+String masukan_pin;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
 
@@ -33,13 +33,13 @@ char pass[] = "";
 
 WiFiClient client;
 long myChannelNumber =    3014689;
-const char * myWriteAPIKey = "1JWU7WHCOLKPJD0W";
+const char * myWriteAPIKey = "986HG1OZ8E6SPRKE";
 int statusCode;
 
 
 void setup() {
   Serial.begin(9600);
-  input_password.reserve(32);    
+  masukan_pin.reserve(32);    
   pinMode(RELAY_PIN, OUTPUT); 
   digitalWrite(RELAY_PIN, HIGH);
   lcd.init();                    
@@ -56,11 +56,11 @@ void loop() {
     Serial.println(key);
 
     if (key == '*') {
-      input_password = ""; 
+      masukan_pin = ""; 
       lcd.clear();
     } else if (key == '#') {
       lcd.clear();
-      if (input_password == password_1 || input_password == password_2 || input_password == password_3) {
+      if (masukan_pin == pin_1 || masukan_pin == pin_2 || masukan_pin == pin_3) {
         Serial.println("Valid Password => unlock the door");
         lcd.setCursor(0, 0);
         lcd.print("CORRECT!");
@@ -71,21 +71,21 @@ void loop() {
         delay(20000);
         digitalWrite(RELAY_PIN, HIGH);
       } else {
-        Serial.println("Invalid Password => Try again");
+        Serial.println("PIN Salah => Coba Lagi");
         lcd.setCursor(0, 0);
-        lcd.print("INCORRECT!");
+        lcd.print("Salah PIN");
         lcd.setCursor(0, 1);
-        lcd.print("ACCESS DENIED!");
+        lcd.print("Tidak Dizinkan");
       }
 
-      input_password = "";
+      masukan_pin = "";
     } else {
-      if (input_password.length() == 0) {
+      if (masukan_pin.length() == 0) {
         lcd.clear();
       }
 
-      input_password += key; 
-      lcd.setCursor(input_password.length(), 0); 
+      masukan_pin += key; 
+      lcd.setCursor(masukan_pin.length(), 0); 
       lcd.print('*');                 
     }
   }
@@ -103,7 +103,7 @@ void loop() {
   } 
   }
   {
-     ThingSpeak.setField(1,"Door Opened 1" );
+    ThingSpeak.setField(1,"Door Opened 1" );
    ThingSpeak.setField(2,"Door Closed 2" );
 
   statusCode = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
