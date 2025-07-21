@@ -1,0 +1,120 @@
+#include <LiquidCrystal_I2C.h>
+#include <Keypad.h>
+#include <WiFi.h>
+#include <ThingSpeak.h>
+
+#define RELAY_PIN   19 
+#define ROW_NUM     4  
+#define COLUMN_NUM  4 
+
+char keys[ROW_NUM][COLUMN_NUM] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+
+byte pin_rows[ROW_NUM] = {12, 14, 27, 26};   
+byte pin_column[COLUMN_NUM] = {25, 33, 32,17};  
+
+Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
+
+const String password_1 = "1234"; 
+const String password_2 = "4444";  
+const String password_3 = "ABCD";  
+String input_password;
+
+LiquidCrystal_I2C lcd(0x27, 16, 2); 
+
+char ssid[] = "Wokwi-GUEST";
+char pass[] = ""; 
+
+
+
+WiFiClient client;
+long myChannelNumber =    3014689;
+const char * myWriteAPIKey = "1JWU7WHCOLKPJD0W";
+int statusCode;
+
+
+void setup() {
+  Serial.begin(9600);
+  input_password.reserve(32);    
+  pinMode(RELAY_PIN, OUTPUT); 
+  digitalWrite(RELAY_PIN, HIGH);
+  lcd.init();                    
+  lcd.backlight();
+
+  WiFi.mode(WIFI_STA);
+  ThingSpeak.begin(client);
+}
+
+void loop() {
+  char key = keypad.getKey();
+
+  if (key) {
+    Serial.println(key);
+
+    if (key == '*') {
+      input_password = ""; 
+      lcd.clear();
+    } else if (key == '#') {
+      lcd.clear();
+      if (input_password == password_1 || input_password == password_2 || input_password == password_3) {
+        Serial.println("Valid Password => unlock the door");
+        lcd.setCursor(0, 0);
+        lcd.print("CORRECT!");
+        lcd.setCursor(0, 1);
+        lcd.print("DOOR UNLOCKED!");
+
+        digitalWrite(RELAY_PIN, LOW); 
+        delay(20000);
+        digitalWrite(RELAY_PIN, HIGH);
+      } else {
+        Serial.println("Invalid Password => Try again");
+        lcd.setCursor(0, 0);
+        lcd.print("INCORRECT!");
+        lcd.setCursor(0, 1);
+        lcd.print("ACCESS DENIED!");
+      }
+
+      input_password = "";
+    } else {
+      if (input_password.length() == 0) {
+        lcd.clear();
+      }
+
+      input_password += key; 
+      lcd.setCursor(input_password.length(), 0); 
+      lcd.print('*');                 
+    }
+  }
+  {
+    if(WiFi.status() != WL_CONNECTED)  
+  {
+  Serial.print("Attempting to connect");
+    while(WiFi.status() != WL_CONNECTED)
+    {
+    WiFi.begin(ssid, pass); 
+    Serial.print(".");
+    delay(5000);
+    }
+  Serial.println("\nConnected.");
+  } 
+  }
+  {
+     ThingSpeak.setField(1,"Door Opened 1" );
+   ThingSpeak.setField(2,"Door Closed 2" );
+
+  statusCode = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
+
+if(statusCode == 200) { //successful writing code
+Serial.println("Channel update successful.");
+}
+else {
+Serial.println("Problem Writing data. HTTP error code :" +
+String(statusCode));
+}
+  }
+  
+}
