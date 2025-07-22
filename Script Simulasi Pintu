@@ -15,9 +15,9 @@ char keys[ROW_NUM][COLUMN_NUM] = {
 };
 
 byte pin_rows[ROW_NUM] = {12, 14, 27, 26};   
-byte pin_column[COLUMN_NUM] = {25, 33, 32,17};  
+byte pin_column[COLUMN_NUM] = {25, 33, 32, 17};  
 
-Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
+Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM);
 
 const String pin_1 = "1234"; 
 const String pin_2 = "4444";  
@@ -29,13 +29,11 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 char ssid[] = "Wokwi-GUEST";
 char pass[] = ""; 
 
-
-
 WiFiClient client;
-long myChannelNumber =    3014689;
-const char * myWriteAPIKey = "986HG1OZ8E6SPRKE";
+unsigned long myChannelNumber = 3014689;
+const char * myWriteAPIKey = "M3JFT99ZSBPPOMAG";
 int statusCode;
-
+unsigned long lastSendTime = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -46,6 +44,15 @@ void setup() {
   lcd.backlight();
 
   WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, pass);
+  Serial.print("Connecting to WiFi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi connected.");
   ThingSpeak.begin(client);
 }
 
@@ -70,6 +77,22 @@ void loop() {
         digitalWrite(RELAY_PIN, LOW); 
         delay(20000);
         digitalWrite(RELAY_PIN, HIGH);
+
+        // Kirim status ke ThingSpeak
+        if (millis() - lastSendTime > 16000) { // minimal 15 detik
+          ThingSpeak.setField(1, "Door Opened");
+          ThingSpeak.setField(2, masukan_pin); // Kirim PIN yang dipakai
+          statusCode = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+
+          if (statusCode == 200) {
+            Serial.println("Channel update successful.");
+          } else {
+            Serial.println("Problem Writing data. HTTP error code: " + String(statusCode));
+          }
+
+          lastSendTime = millis();
+        }
+
       } else {
         Serial.println("PIN Salah => Coba Lagi");
         lcd.setCursor(0, 0);
@@ -89,32 +112,4 @@ void loop() {
       lcd.print('*');                 
     }
   }
-  {
-    if(WiFi.status() != WL_CONNECTED)  
-  {
-  Serial.print("Attempting to connect");
-    while(WiFi.status() != WL_CONNECTED)
-    {
-    WiFi.begin(ssid, pass); 
-    Serial.print(".");
-    delay(5000);
-    }
-  Serial.println("\nConnected.");
-  } 
-  }
-  {
-    ThingSpeak.setField(1,"Door Opened 1" );
-   ThingSpeak.setField(2,"Door Closed 2" );
-
-  statusCode = ThingSpeak.writeFields(myChannelNumber,myWriteAPIKey);
-
-if(statusCode == 200) { //successful writing code
-Serial.println("Channel update successful.");
-}
-else {
-Serial.println("Problem Writing data. HTTP error code :" +
-String(statusCode));
-}
-  }
-  
 }
